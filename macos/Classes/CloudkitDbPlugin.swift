@@ -17,10 +17,14 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     if parts.count == 1 {
       result(FlutterMethodNotImplemented)
     } else if parts.count == 2 {
+      guard let args = call.arguments as? [String: Any]
+      else {
+        result(argumentError)
+      }
       if parts[0] == "documents" {
-        handleDocuments(call, result: result)
+        handleDocuments(method: parts[1], args: args, result: result)
       } else if parts[0] == "kv" {
-        handleKv(call, result: result)
+        handleKv(method: parts[1], args: args, result: result)
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -29,9 +33,10 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  public func handleDocuments(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard let args = call.arguments as? [String: Any],
-      let containerId = args["containerId"] as? String
+  public func handleDocuments(
+    method: String, args: [String: Any?], result: @escaping FlutterResult
+  ) {
+    guard let containerId = args["containerId"] as? String
     else {
       result(argumentError)
       return
@@ -39,12 +44,27 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     result("OK")
   }
 
-  public func handleKv(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard let args = call.arguments as? [String: Any],
-      let containerId = args["containerId"] as? String
+  public func handleKv(
+    method: String, args: [String: Any?], result: @escaping FlutterResult
+  ) {
+    guard let containerId = args["containerId"] as? String
     else {
       result(argumentError)
       return
+    }
+    switch method {
+    case "getString":
+      guard let key = args["key"] as? String else {
+        result(argumentError)
+        return
+      }
+      CloudKitDbKv.getString(containerId: containerId, key: key, result: result)
+    case "putString":
+      guard let key = args["key"] as? String, let value = args["value"] as Any? else {
+        result(argumentError)
+        return
+      }
+      CloudKitDbKv.putString(containerId: containerId, key: key, value: value, result: result)
     }
     result("OK")
   }
@@ -58,14 +78,36 @@ let fileNotFoundError = FlutterError(
   code: "E_FNF", message: "The file does not exist", details: nil)
 
 public class CloudKitDbKv {
-  public func getString(containerId: String, key: String, result: @escaping FlutterResult) {
+  public static func getString(containerId: String, key: String, result: @escaping FlutterResult) {
     let database = CKContainer(identifier: containerId).privateCloudDatabase
 
     let query = CKQuery(recordType: "StorageItem", predicate: NSPredicate(value: true))
 
+    /// `result([String])` if saved, otherwise, `result(nil)`
     database.perform(query, inZoneWith: nil) { (records, error) in
-      let foundRecords = records?.compactMap({ $0.value(forKey: key) as? String })
-      result(foundRecords)
+      if records != nil, error == nil {
+        let foundRecords = records.compactMap({ $0.value(forKey: key) as? String })
+        result(foundRecords)
+      } else {
+        result(nil)
+      }
+    }
+  }
+
+  /// `result(true)` if saved, otherwise, `result(false)`
+  public static func putString(
+    containerId: String, key: String, value: Any?, result: @escaping FlutterResult
+  ) {
+    let database = CKContainer(identifier: containerId).privateCloudDatabase
+    let record = CKRecord(recordType: "StorageItem")
+    record.setValue(value, forKey: key)
+
+    database.save(record) { (record, error) in
+      if record != nil, error == nil {
+        result(true)
+      } else {
+        result(false)
+      }
     }
   }
 }
