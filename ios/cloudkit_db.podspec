@@ -5,7 +5,7 @@
 Pod::Spec.new do |s|
   s.name             = 'cloudkit_db'
   s.version          = '0.0.1'
-  s.summary          = 'Supporting Apple's CloudKit database.'
+  s.summary          = "Supporting Apple's CloudKit database."
   s.description      = <<-DESC
 Supporting Apple's CloudKit database.
                        DESC
