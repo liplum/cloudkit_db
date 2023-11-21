@@ -7,12 +7,12 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 class MockCloudkitDbPlatform
     with MockPlatformInterfaceMixin
     implements CloudkitDbPlatform {
-
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 }
 
 void main() {
+  const testContainerId = "net.liplum.CloudKitDb";
   final CloudkitDbPlatform initialPlatform = CloudkitDbPlatform.instance;
 
   test('$MethodChannelCloudkitDb is the default instance', () {
@@ -20,7 +20,7 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    CloudkitDb cloudkitDbPlugin = CloudkitDb();
+    CloudkitDb cloudkitDbPlugin = const CloudkitDb(containerId: testContainerId);
     MockCloudkitDbPlatform fakePlatform = MockCloudkitDbPlatform();
     CloudkitDbPlatform.instance = fakePlatform;
 
