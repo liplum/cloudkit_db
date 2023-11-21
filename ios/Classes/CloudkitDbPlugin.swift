@@ -1,3 +1,4 @@
+import CloudKit
 import Flutter
 import UIKit
 
@@ -9,6 +10,9 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "getPlatformVersion" {
+      result("iOS " + UIDevice.current.systemVersion)
+    }
     let parts = call.method.split(separator: ".")
     if parts.count == 1 {
       result(FlutterMethodNotImplemented)
@@ -44,4 +48,29 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     }
     result("OK")
   }
+}
+
+let argumentError = FlutterError(code: "E_ARG", message: "Invalid Arguments", details: nil)
+let containerError = FlutterError(
+  code: "E_CTR",
+  message: "Invalid containerId, or user is not signed in, or user disabled iCloud permission",
+  details: nil)
+let fileNotFoundError = FlutterError(
+  code: "E_FNF", message: "The file does not exist", details: nil)
+
+public class CloudKitDbKv {
+  public func getString(containerId: String, key: Strin, result: @escaping FlutterResult) {
+    let database = CKContainer(identifier: containerId).privateCloudDatabase
+
+    let query = CKQuery(recordType: "StorageItem", predicate: NSPredicate(value: true))
+
+    database.perform(query, inZoneWith: nil) { (records, error) in
+      let foundRecords = records?.compactMap({ $0.value(forKey: key) as? String })
+      result(foundRecords)
+    }
+  }
+}
+
+public class CloudKitDbDocuments {
+
 }
