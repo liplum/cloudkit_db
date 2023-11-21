@@ -16,7 +16,7 @@ void main() {
   const testContainerId = "net.liplum.CloudKitDb";
 
   testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    const CloudkitDb plugin = CloudkitDb(containerId: testContainerId);
+    final plugin = CloudkitDb(containerId: testContainerId);
     final String? version = await plugin.getPlatformVersion();
     // The version string depends on the host platform running the test, so
     // just assert that some non-empty string is returned.

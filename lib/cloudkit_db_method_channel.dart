@@ -11,7 +11,18 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version = await methodChannel.invokeMethod<String>('getPlatformVersion');
+    final version =
+        await methodChannel.invokeMethod<String>('getPlatformVersion');
     return version;
+  }
+
+  Future<String?> kvGetString({
+    required String containerId,
+    required String key,
+  }) async {
+    return await methodChannel.invokeMethod<String>('kv.getString', {
+      "containerId": containerId,
+      "key": key,
+    });
   }
 }

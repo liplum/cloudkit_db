@@ -9,6 +9,13 @@ class MockCloudkitDbPlatform
     implements CloudkitDbPlatform {
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<String?> kvGetString({
+    required String containerId,
+    required String key,
+  }) =>
+      Future.value('[$containerId] value of "$key"');
 }
 
 void main() {
@@ -20,7 +27,7 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    CloudkitDb cloudkitDbPlugin = const CloudkitDb(containerId: testContainerId);
+    final cloudkitDbPlugin = CloudkitDb(containerId: testContainerId);
     MockCloudkitDbPlatform fakePlatform = MockCloudkitDbPlatform();
     CloudkitDbPlatform.instance = fakePlatform;
 

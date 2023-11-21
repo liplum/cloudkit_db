@@ -26,4 +26,11 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
+
+  Future<String?> kvGetString({
+    required String containerId,
+    required String key,
+  }) async {
+    throw UnimplementedError('platformVersion() has not been implemented.');
+  }
 }

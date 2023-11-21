@@ -19,7 +19,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _cloudkitDbPlugin = const CloudkitDb(containerId: testContainerId);
+  final _cloudkitDbPlugin = CloudkitDb(containerId: testContainerId);
 
   @override
   void initState() {
