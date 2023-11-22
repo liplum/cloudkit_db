@@ -55,8 +55,8 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
   @override
   Future<void> uploadDocument({
     required String containerId,
-    required String filePath,
-    required String destinationRelativePath,
+    required String localSourceFilePath,
+    required String cloudDestFilePath,
     void Function(Stream<double>)? onProgress,
   }) async {
     var eventChannelName = '';
@@ -79,8 +79,8 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
 
     await methodChannel.invokeMethod('documents.upload', {
       'containerId': containerId,
-      'localFilePath': filePath,
-      'cloudFilePath': destinationRelativePath,
+      'localFilePath': localSourceFilePath,
+      'cloudFilePath': cloudDestFilePath,
       'eventChannelName': eventChannelName
     });
   }
@@ -88,8 +88,8 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
   @override
   Future<void> downloadDocument({
     required String containerId,
-    required String relativePath,
-    required String destinationFilePath,
+    required String cloudSourceFilePath,
+    required String localDestFilePath,
     void Function(Stream<double>)? onProgress,
   }) async {
     var eventChannelName = '';
@@ -113,8 +113,8 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
 
     await methodChannel.invokeMethod('documents.download', {
       'containerId': containerId,
-      'cloudFilePath': relativePath,
-      'localFilePath': destinationFilePath,
+      'cloudFilePath': cloudSourceFilePath,
+      'localFilePath': localDestFilePath,
       'eventChannelName': eventChannelName
     });
   }
@@ -122,24 +122,24 @@ class MethodChannelCloudkitDb extends CloudkitDbPlatform {
   @override
   Future<void> deleteDocument({
     required containerId,
-    required String relativePath,
+    required String cloudFilePath,
   }) async {
     await methodChannel.invokeMethod('documents.delete', {
       'containerId': containerId,
-      'cloudFilePath': relativePath,
+      'cloudFilePath': cloudFilePath,
     });
   }
 
   @override
   Future<void> moveDocument({
     required containerId,
-    required String fromRelativePath,
-    required String toRelativePath,
+    required String fromCloudPathFile,
+    required String toCloudPathFile,
   }) async {
     await methodChannel.invokeMethod('documents.move', {
       'containerId': containerId,
-      'atRelativePath': fromRelativePath,
-      'toRelativePath': toRelativePath,
+      'fromCloudPathFile': fromCloudPathFile,
+      'toCloudPathFile': toCloudPathFile,
     });
   }
 

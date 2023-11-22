@@ -19,32 +19,46 @@ class MockCloudkitDbPlatform
       Future.value('[$containerId] value of "$key"');
 
   @override
-  Future<void> deleteDocument({required String containerId, required String relativePath}) {
+  Future<void> deleteDocument(
+      {required String containerId, required String cloudFilePath}) {
     // TODO: implement deleteDocument
     throw UnimplementedError();
   }
 
   @override
-  Future<void> downloadDocument({required String containerId, required String relativePath, required String destinationFilePath, void Function(Stream<double> p1)? onProgress}) {
+  Future<void> downloadDocument(
+      {required String containerId,
+      required String cloudSourceFilePath,
+      required String localDestFilePath,
+      void Function(Stream<double> p1)? onProgress}) {
     // TODO: implement downloadDocument
     throw UnimplementedError();
   }
 
   @override
-  Future<List<ICloudFile>> gatherDocument({required String containerId, void Function(Stream<List<ICloudFile>> p1)? onUpdate}) {
+  Future<List<ICloudFile>> gatherDocument(
+      {required String containerId,
+      void Function(Stream<List<ICloudFile>> p1)? onUpdate}) {
     // TODO: implement gatherDocument
     throw UnimplementedError();
   }
 
   @override
-  Future<void> moveDocument({required String containerId, required String fromRelativePath, required String toRelativePath}) {
+  Future<void> moveDocument({
+    required String containerId,
+    required String fromCloudPathFile,
+    required String toCloudPathFile,
+  }) {
     // TODO: implement moveDocument
     throw UnimplementedError();
   }
 
   @override
-  Future<void> uploadDocument({required String containerId, required String filePath, required String destinationRelativePath, void Function(Stream<double> p1)?
-  onProgress}) {
+  Future<void> uploadDocument(
+      {required String containerId,
+      required String localSourceFilePath,
+      required String cloudDestFilePath,
+      void Function(Stream<double> p1)? onProgress}) {
     // TODO: implement uploadDocument
     throw UnimplementedError();
   }

@@ -48,9 +48,9 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   ///
   /// [containerId] is the iCloud Container Id.
   ///
-  /// [filePath] is the full path of the local file.
+  /// [localSourceFilePath] is the full path of the local file.
   ///
-  /// [destinationRelativePath] is the relative path of the file to be stored in
+  /// [cloudDestFilePath] is the relative path of the file to be stored in
   /// iCloud.
   ///
   /// [onProgress] is an optional callback to track the progress of the
@@ -61,8 +61,8 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   /// to iCloud.
   Future<void> uploadDocument({
     required String containerId,
-    required String filePath,
-    required String destinationRelativePath,
+    required String localSourceFilePath,
+    required String cloudDestFilePath,
     void Function(Stream<double>)? onProgress,
   }) async {
     throw UnimplementedError('uploadDocument() has not been implemented.');
@@ -72,10 +72,10 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   ///
   /// [containerId] is the iCloud Container Id.
   ///
-  /// [relativePath] is the relative path of the file on iCloud, such as file1
+  /// [cloudSourceFilePath] is the relative path of the file on iCloud, such as file1
   /// or folder/file2.
   ///
-  /// [destinationFilePath] is the full path of the local file to be saved as.
+  /// [localDestFilePath] is the full path of the local file to be saved as.
   ///
   /// [onProgress] is an optional callback to track the progress of the
   /// download. It takes a Stream<double> as input, which is the percentage of
@@ -85,8 +85,8 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   /// downloaded.
   Future<void> downloadDocument({
     required String containerId,
-    required String relativePath,
-    required String destinationFilePath,
+    required String cloudSourceFilePath,
+    required String localDestFilePath,
     void Function(Stream<double>)? onProgress,
   }) async {
     throw UnimplementedError('downloadDocument() has not been implemented.');
@@ -97,14 +97,14 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   ///
   /// [containerId] is the iCloud Container Id.
   ///
-  /// [relativePath] is the relative path of the file on iCloud, such as file1
+  /// [cloudFilePath] is the relative path of the file on iCloud, such as file1
   /// or folder/file2
   ///
   /// PlatformException with code PlatformExceptionCode.fileNotFound will be
   /// thrown if the file does not exist
   Future<void> deleteDocument({
     required String containerId,
-    required String relativePath,
+    required String cloudFilePath,
   }) async {
     throw UnimplementedError('deleteDocument() has not been implemented.');
   }
@@ -122,10 +122,10 @@ abstract class CloudkitDbPlatform extends PlatformInterface {
   /// thrown if the file does not exist
   Future<void> moveDocument({
     required String containerId,
-    required String fromRelativePath,
-    required String toRelativePath,
+    required String fromCloudPathFile,
+    required String toCloudPathFile,
   }) async {
-    throw UnimplementedError('move() has not been implemented.');
+    throw UnimplementedError('moveDocument() has not been implemented.');
   }
 
   Future<String?> getKvString({

@@ -93,13 +93,13 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
       }
       delete(containerId: containerId, cloudFilePath: cloudFilePath, result)
     case "move":
-      guard let atRelativePath = args["atRelativePath"] as? String,
-        let toRelativePath = args["toRelativePath"] as? String
+      guard let fromCloudPathFile = args["fromCloudPathFile"] as? String,
+        let toCloudPathFile = args["toCloudPathFile"] as? String
       else {
         result(argumentError)
         return
       }
-      move(containerId: containerId, atRelativePath: atRelativePath, toRelativePath: toRelativePath, result)
+      move(containerId: containerId, fromCloudPathFile: fromCloudPathFile, toCloudPathFile: toCloudPathFile, result)
     case "createEventChannel":
       guard let eventChannelName = args["eventChannelName"] as? String
       else {
@@ -463,7 +463,7 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
   }
 
   private func move(
-    containerId: String, atRelativePath: String, toRelativePath: String,
+    containerId: String, fromCloudPathFile: String, toCloudPathFile: String,
     _ result: @escaping FlutterResult
   ) {
     guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
@@ -473,8 +473,8 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     }
     debugPrint("containerURL: \(containerURL.path)")
 
-    let atURL = containerURL.appendingPathComponent(atRelativePath)
-    let toURL = containerURL.appendingPathComponent(toRelativePath)
+    let atURL = containerURL.appendingPathComponent(fromCloudPathFile)
+    let toURL = containerURL.appendingPathComponent(toCloudPathFile)
     let fileCoordinator = NSFileCoordinator(filePresenter: nil)
     fileCoordinator.coordinate(
       writingItemAt: atURL, options: NSFileCoordinator.WritingOptions.forMoving,
