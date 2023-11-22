@@ -32,8 +32,10 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
       }
       if parts[0] == "documents" {
         handleDocuments(method: String(parts[1]), args: args, result)
+        return
       } else if parts[0] == "kv" {
         handleKv(method: String(parts[1]), args: args, result)
+        return
       } else {
         result(FlutterMethodNotImplemented)
         return
@@ -47,17 +49,16 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
   public func handleDocuments(
     method: String, args: [String: Any?], _ result: @escaping FlutterResult
   ) {
-    guard let containerId = args["containerId"] as? String,
-      let eventChannelName = args["eventChannelName"] as? String
+    guard let containerId = args["containerId"] as? String
     else {
       result(argumentError)
       return
     }
     switch method {
     case "upload":
-      guard let key = args["key"] as? String,
-        let localFilePath = args["localFilePath"] as? String,
-        let cloudFilePath = args["cloudFilePath"] as? String
+      guard let localFilePath = args["localFilePath"] as? String,
+        let cloudFilePath = args["cloudFilePath"] as? String,
+        let eventChannelName = args["eventChannelName"] as? String
       else {
         result(argumentError)
         return
@@ -67,11 +68,48 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         eventChannelName: eventChannelName,
         result)
     case "gather":
+      guard let eventChannelName = args["eventChannelName"] as? String
+      else {
+        result(argumentError)
+        return
+      }
       gather(containerId: containerId, eventChannelName: eventChannelName, result)
-    default: break
+    case "download":
+      guard let localFilePath = args["localFilePath"] as? String,
+        let cloudFilePath = args["cloudFilePath"] as? String,
+        let eventChannelName = args["eventChannelName"] as? String
+      else {
+        result(argumentError)
+        return
+      }
+      download(
+        containerId: containerId, cloudFilePath: cloudFilePath, localFilePath: localFilePath,
+        eventChannelName: eventChannelName, result)
+    case "delete":
+      guard let cloudFilePath = args["cloudFilePath"] as? String
+      else {
+        result(argumentError)
+        return
+      }
+      delete(containerId: containerId, cloudFilePath: cloudFilePath, result)
+    case "move":
+      guard let atRelativePath = args["atRelativePath"] as? String,
+        let toRelativePath = args["toRelativePath"] as? String
+      else {
+        result(argumentError)
+        return
+      }
+      move(containerId: containerId, atRelativePath: atRelativePath, toRelativePath: toRelativePath, result)
+    case "createEventChannel":
+      guard let eventChannelName = args["eventChannelName"] as? String
+      else {
+        result(argumentError)
+        return
+      }
+      createEventChannel(eventChannelName: eventChannelName, result)
+    default:
+      result(FlutterMethodNotImplemented)
     }
-    result(nil)
-    return
   }
 
   public func handleKv(
@@ -95,10 +133,9 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         return
       }
       putString(containerId: containerId, key: key, value: value, result)
-    default: break
+    default:
+      result(FlutterMethodNotImplemented)
     }
-    result(nil)
-    return
   }
 
   public func gather(
@@ -281,6 +318,180 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
       if progress >= 100 {
         streamHandler.setEvent(FlutterEndOfEventStream)
         removeStreamHandler(eventChannelName)
+      }
+    }
+  }
+
+  private func download(
+    containerId: String, cloudFilePath: String, localFilePath: String, eventChannelName: String,
+    _ result: @escaping FlutterResult
+  ) {
+    guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
+    else {
+      result(containerError)
+      return
+    }
+    debugPrint("containerURL: \(containerURL.path)")
+
+    let cloudFileURL = containerURL.appendingPathComponent(cloudFilePath)
+    do {
+      try FileManager.default.startDownloadingUbiquitousItem(at: cloudFileURL)
+    } catch {
+      result(nativeCodeError(error))
+    }
+
+    let query = NSMetadataQuery.init()
+    query.operationQueue = .main
+    query.searchScopes = querySearchScopes
+    query.predicate = NSPredicate(format: "%K == %@", NSMetadataItemPathKey, cloudFileURL.path)
+
+    let downloadStreamHandler = self.streamHandlers[eventChannelName]
+    downloadStreamHandler?.onCancelHandler = { [self] in
+      removeObservers(query)
+      query.stop()
+      removeStreamHandler(eventChannelName)
+    }
+
+    let localFileURL = URL(fileURLWithPath: localFilePath)
+    addDownloadObservers(
+      query: query, cloudFileURL: cloudFileURL, localFileURL: localFileURL,
+      eventChannelName: eventChannelName)
+
+    query.start()
+    result(nil)
+  }
+
+  private func addDownloadObservers(
+    query: NSMetadataQuery, cloudFileURL: URL, localFileURL: URL, eventChannelName: String
+  ) {
+    NotificationCenter.default.addObserver(
+      forName: NSNotification.Name.NSMetadataQueryDidFinishGathering, object: query,
+      queue: query.operationQueue
+    ) { [self] (notification) in
+      onDownloadQueryNotification(
+        query: query, cloudFileURL: cloudFileURL, localFileURL: localFileURL,
+        eventChannelName: eventChannelName)
+    }
+
+    NotificationCenter.default.addObserver(
+      forName: NSNotification.Name.NSMetadataQueryDidUpdate, object: query,
+      queue: query.operationQueue
+    ) { [self] (notification) in
+      onDownloadQueryNotification(
+        query: query, cloudFileURL: cloudFileURL, localFileURL: localFileURL,
+        eventChannelName: eventChannelName)
+    }
+  }
+
+  private func onDownloadQueryNotification(
+    query: NSMetadataQuery, cloudFileURL: URL, localFileURL: URL, eventChannelName: String
+  ) {
+    if query.results.count == 0 {
+      return
+    }
+
+    guard let fileItem = query.results.first as? NSMetadataItem else { return }
+    guard let fileURL = fileItem.value(forAttribute: NSMetadataItemURLKey) as? URL else { return }
+    guard
+      let fileURLValues = try? fileURL.resourceValues(forKeys: [
+        .ubiquitousItemDownloadingErrorKey, .ubiquitousItemDownloadingStatusKey,
+      ])
+    else { return }
+    let streamHandler = self.streamHandlers[eventChannelName]
+
+    if let error = fileURLValues.ubiquitousItemDownloadingError {
+      streamHandler?.setEvent(nativeCodeError(error))
+      return
+    }
+
+    if let progress = fileItem.value(forAttribute: NSMetadataUbiquitousItemPercentDownloadedKey)
+      as? Double
+    {
+      streamHandler?.setEvent(progress)
+    }
+
+    if fileURLValues.ubiquitousItemDownloadingStatus == URLUbiquitousItemDownloadingStatus.current {
+      do {
+        try moveCloudFile(at: cloudFileURL, to: localFileURL)
+        streamHandler?.setEvent(FlutterEndOfEventStream)
+        removeStreamHandler(eventChannelName)
+      } catch {
+        streamHandler?.setEvent(nativeCodeError(error))
+      }
+    }
+  }
+
+  private func moveCloudFile(at: URL, to: URL) throws {
+    do {
+      if FileManager.default.fileExists(atPath: to.path) {
+        try FileManager.default.removeItem(at: to)
+      }
+      try FileManager.default.copyItem(at: at, to: to)
+    } catch {
+      throw error
+    }
+  }
+
+  private func delete(containerId: String, cloudFilePath: String, _ result: @escaping FlutterResult)
+  {
+    guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
+    else {
+      result(containerError)
+      return
+    }
+    debugPrint("containerURL: \(containerURL.path)")
+
+    let fileURL = containerURL.appendingPathComponent(cloudFilePath)
+    let fileCoordinator = NSFileCoordinator(filePresenter: nil)
+    fileCoordinator.coordinate(
+      writingItemAt: fileURL, options: NSFileCoordinator.WritingOptions.forDeleting, error: nil
+    ) {
+      writingURL in
+      do {
+        var isDir: ObjCBool = false
+        if !FileManager.default.fileExists(atPath: writingURL.path, isDirectory: &isDir) {
+          result(fileNotFoundError)
+          return
+        }
+        try FileManager.default.removeItem(at: writingURL)
+        result(nil)
+      } catch {
+        debugPrint("error: \(error.localizedDescription)")
+        result(nativeCodeError(error))
+      }
+    }
+  }
+
+  private func move(
+    containerId: String, atRelativePath: String, toRelativePath: String,
+    _ result: @escaping FlutterResult
+  ) {
+    guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
+    else {
+      result(containerError)
+      return
+    }
+    debugPrint("containerURL: \(containerURL.path)")
+
+    let atURL = containerURL.appendingPathComponent(atRelativePath)
+    let toURL = containerURL.appendingPathComponent(toRelativePath)
+    let fileCoordinator = NSFileCoordinator(filePresenter: nil)
+    fileCoordinator.coordinate(
+      writingItemAt: atURL, options: NSFileCoordinator.WritingOptions.forMoving,
+      writingItemAt: toURL, options: NSFileCoordinator.WritingOptions.forReplacing, error: nil
+    ) {
+      atWritingURL, toWritingURL in
+      do {
+        let toDirURL = toWritingURL.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: toDirURL.path) {
+          try FileManager.default.createDirectory(
+            at: toDirURL, withIntermediateDirectories: true, attributes: nil)
+        }
+        try FileManager.default.moveItem(at: atWritingURL, to: toWritingURL)
+        result(nil)
+      } catch {
+        debugPrint("error: \(error.localizedDescription)")
+        result(nativeCodeError(error))
       }
     }
   }
