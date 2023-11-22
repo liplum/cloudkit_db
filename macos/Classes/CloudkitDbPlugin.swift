@@ -12,6 +12,7 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     if call.method == "getPlatformVersion" {
       result("macOS " + ProcessInfo.processInfo.operatingSystemVersionString)
+      return
     }
     let parts = call.method.split(separator: ".")
     if parts.count == 1 {
@@ -28,9 +29,11 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         handleKv(method: String(parts[1]), args: args, result)
       } else {
         result(FlutterMethodNotImplemented)
+        return
       }
     } else {
       result(FlutterMethodNotImplemented)
+      return
     }
   }
 
@@ -51,7 +54,7 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         result(argumentError)
         return
       }
-      CloudKitDbDocuments.upload(
+      upload(
         containerId: containerId, localFilePath: localFilePath, cloudFilePath: cloudFilePath,
         result)
     case "list":
@@ -59,6 +62,7 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
     default: break
     }
     result(nil)
+    return
   }
 
   public func handleKv(
@@ -75,81 +79,27 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         result(argumentError)
         return
       }
-      CloudKitDbKv.getString(containerId: containerId, key: key, result)
+      getString(containerId: containerId, key: key, result)
     case "putString":
       guard let key = args["key"] as? String, let value = args["value"] as Any? else {
         result(argumentError)
         return
       }
-      CloudKitDbKv.putString(containerId: containerId, key: key, value: value, result)
+      putString(containerId: containerId, key: key, value: value, result)
     default: break
     }
     result(nil)
-  }
-}
-let argumentError = FlutterError(code: "E_ARG", message: "Invalid Arguments", details: nil)
-let containerError = FlutterError(
-  code: "E_CTR",
-  message: "Invalid containerId, or user is not signed in, or user disabled iCloud permission",
-  details: nil)
-let fileNotFoundError = FlutterError(
-  code: "E_FNF", message: "The file does not exist", details: nil)
-
-func nativeCodeError(_ error: Error) -> FlutterError {
-  return FlutterError(code: "E_NAT", message: "Native Code Error", details: "\(error)")
-}
-
-public class CloudKitDbKv {
-  public static func getString(containerId: String, key: String, _ result: @escaping FlutterResult)
-  {
-    let database = CKContainer(identifier: containerId).privateCloudDatabase
-
-    let query = CKQuery(recordType: "StorageItem", predicate: NSPredicate(value: true))
-
-    /// `result([String])` if saved, otherwise, `result(nil)`
-    database.perform(query, inZoneWith: nil) { (records, error) in
-      if records != nil, error == nil {
-        let foundRecords = records!.compactMap({ $0.value(forKey: key) as? String })
-        result(foundRecords)
-      } else {
-        result(nil)
-      }
-    }
+    return
   }
 
-  /// `result(true)` if saved, otherwise, `result(false)`
-  public static func putString(
-    containerId: String, key: String, value: Any?, _ result: @escaping FlutterResult
-  ) {
-    let database = CKContainer(identifier: containerId).privateCloudDatabase
-    let record = CKRecord(recordType: "StorageItem")
-    record.setValue(value, forKey: key)
-
-    database.save(record) { (record, error) in
-      if record != nil, error == nil {
-        result(true)
-      } else {
-        result(false)
-      }
-    }
-  }
-}
-
-func debugPrint(_ message: String) {
-  #if DEBUG
-    print(message)
-  #endif
-}
-
-public class CloudKitDbDocuments {
-  public static func list(
+  public func list(
     containerId: String,
     _ result: @escaping FlutterResult
   ) {
 
   }
 
-  public static func upload(
+  public func upload(
     containerId: String, localFilePath: String, cloudFilePath: String,
     _ result: @escaping FlutterResult
   ) {
@@ -179,4 +129,54 @@ public class CloudKitDbDocuments {
       result(nativeCodeError(error))
     }
   }
+
+  public func getString(containerId: String, key: String, _ result: @escaping FlutterResult) {
+    let database = CKContainer(identifier: containerId).privateCloudDatabase
+
+    let query = CKQuery(recordType: "StorageItem", predicate: NSPredicate(value: true))
+
+    /// `result([String])` if saved, otherwise, `result(nil)`
+    database.perform(query, inZoneWith: nil) { (records, error) in
+      if records != nil, error == nil {
+        let foundRecords = records!.compactMap({ $0.value(forKey: key) as? String })
+        result(foundRecords)
+      } else {
+        result(nil)
+      }
+    }
+  }
+
+  /// `result(true)` if saved, otherwise, `result(false)`
+  public func putString(
+    containerId: String, key: String, value: Any?, _ result: @escaping FlutterResult
+  ) {
+    let database = CKContainer(identifier: containerId).privateCloudDatabase
+    let record = CKRecord(recordType: "StorageItem")
+    record.setValue(value, forKey: key)
+
+    database.save(record) { (record, error) in
+      if record != nil, error == nil {
+        result(true)
+      } else {
+        result(false)
+      }
+    }
+  }
+}
+let argumentError = FlutterError(code: "E_ARG", message: "Invalid Arguments", details: nil)
+let containerError = FlutterError(
+  code: "E_CTR",
+  message: "Invalid containerId, or user is not signed in, or user disabled iCloud permission",
+  details: nil)
+let fileNotFoundError = FlutterError(
+  code: "E_FNF", message: "The file does not exist", details: nil)
+
+func nativeCodeError(_ error: Error) -> FlutterError {
+  return FlutterError(code: "E_NAT", message: "Native Code Error", details: "\(error)")
+}
+
+func debugPrint(_ message: String) {
+  #if DEBUG
+    print(message)
+  #endif
 }
