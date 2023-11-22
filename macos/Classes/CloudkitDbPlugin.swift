@@ -23,9 +23,9 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         return
       }
       if parts[0] == "documents" {
-        handleDocuments(method: String(parts[1]), args: args, result: result)
+        handleDocuments(method: String(parts[1]), args: args, result)
       } else if parts[0] == "kv" {
-        handleKv(method: String(parts[1]), args: args, result: result)
+        handleKv(method: String(parts[1]), args: args, result)
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -35,18 +35,34 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
   }
 
   public func handleDocuments(
-    method: String, args: [String: Any?], result: @escaping FlutterResult
+    method: String, args: [String: Any?], _ result: @escaping FlutterResult
   ) {
     guard let containerId = args["containerId"] as? String
     else {
       result(argumentError)
       return
     }
-    result("OK")
+    switch method {
+    case "upload":
+      guard let key = args["key"] as? String,
+        let localFilePath = args["localFilePath"] as? String,
+        let cloudFilePath = args["cloudFilePath"] as? String
+      else {
+        result(argumentError)
+        return
+      }
+      CloudKitDbDocuments.upload(
+        containerId: containerId, localFilePath: localFilePath, cloudFilePath: cloudFilePath,
+        result)
+    case "list":
+      break
+    default: break
+    }
+    result(nil)
   }
 
   public func handleKv(
-    method: String, args: [String: Any?], result: @escaping FlutterResult
+    method: String, args: [String: Any?], _ result: @escaping FlutterResult
   ) {
     guard let containerId = args["containerId"] as? String
     else {
@@ -59,16 +75,16 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         result(argumentError)
         return
       }
-      CloudKitDbKv.getString(containerId: containerId, key: key, result: result)
+      CloudKitDbKv.getString(containerId: containerId, key: key, result)
     case "putString":
       guard let key = args["key"] as? String, let value = args["value"] as Any? else {
         result(argumentError)
         return
       }
-      CloudKitDbKv.putString(containerId: containerId, key: key, value: value, result: result)
+      CloudKitDbKv.putString(containerId: containerId, key: key, value: value, result)
     default: break
     }
-    result("OK")
+    result(nil)
   }
 }
 let argumentError = FlutterError(code: "E_ARG", message: "Invalid Arguments", details: nil)
@@ -84,7 +100,8 @@ func nativeCodeError(_ error: Error) -> FlutterError {
 }
 
 public class CloudKitDbKv {
-  public static func getString(containerId: String, key: String, result: @escaping FlutterResult) {
+  public static func getString(containerId: String, key: String, _ result: @escaping FlutterResult)
+  {
     let database = CKContainer(identifier: containerId).privateCloudDatabase
 
     let query = CKQuery(recordType: "StorageItem", predicate: NSPredicate(value: true))
@@ -102,7 +119,7 @@ public class CloudKitDbKv {
 
   /// `result(true)` if saved, otherwise, `result(false)`
   public static func putString(
-    containerId: String, key: String, value: Any?, result: @escaping FlutterResult
+    containerId: String, key: String, value: Any?, _ result: @escaping FlutterResult
   ) {
     let database = CKContainer(identifier: containerId).privateCloudDatabase
     let record = CKRecord(recordType: "StorageItem")
@@ -125,9 +142,16 @@ func debugPrint(_ message: String) {
 }
 
 public class CloudKitDbDocuments {
-  private static func upload(
-    containerId: String, localFilePath: String, cloudFileName: String,
-    result: @escaping FlutterResult
+  public static func list(
+    containerId: String,
+    _ result: @escaping FlutterResult
+  ) {
+
+  }
+
+  public static func upload(
+    containerId: String, localFilePath: String, cloudFilePath: String,
+    _ result: @escaping FlutterResult
   ) {
     guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
     else {
@@ -136,7 +160,7 @@ public class CloudKitDbDocuments {
     }
     debugPrint("containerURL: \(containerURL.path)")
 
-    let cloudFileURL = containerURL.appendingPathComponent(cloudFileName)
+    let cloudFileURL = containerURL.appendingPathComponent(cloudFilePath)
     let localFileURL = URL(fileURLWithPath: localFilePath)
 
     do {
