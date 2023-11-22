@@ -20,11 +20,12 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
       guard let args = call.arguments as? [String: Any]
       else {
         result(argumentError)
+        return
       }
       if parts[0] == "documents" {
-        handleDocuments(method: parts[1], args: args, result: result)
+        handleDocuments(method: String(parts[1]), args: args, result: result)
       } else if parts[0] == "kv" {
-        handleKv(method: parts[1], args: args, result: result)
+        handleKv(method: String(parts[1]), args: args, result: result)
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -65,6 +66,7 @@ public class CloudkitDbPlugin: NSObject, FlutterPlugin {
         return
       }
       CloudKitDbKv.putString(containerId: containerId, key: key, value: value, result: result)
+    default: break
     }
     result("OK")
   }
@@ -77,6 +79,10 @@ let containerError = FlutterError(
 let fileNotFoundError = FlutterError(
   code: "E_FNF", message: "The file does not exist", details: nil)
 
+func nativeCodeError(_ error: Error) -> FlutterError {
+  return FlutterError(code: "E_NAT", message: "Native Code Error", details: "\(error)")
+}
+
 public class CloudKitDbKv {
   public static func getString(containerId: String, key: String, result: @escaping FlutterResult) {
     let database = CKContainer(identifier: containerId).privateCloudDatabase
@@ -86,7 +92,7 @@ public class CloudKitDbKv {
     /// `result([String])` if saved, otherwise, `result(nil)`
     database.perform(query, inZoneWith: nil) { (records, error) in
       if records != nil, error == nil {
-        let foundRecords = records.compactMap({ $0.value(forKey: key) as? String })
+        let foundRecords = records!.compactMap({ $0.value(forKey: key) as? String })
         result(foundRecords)
       } else {
         result(nil)
@@ -108,6 +114,45 @@ public class CloudKitDbKv {
       } else {
         result(false)
       }
+    }
+  }
+}
+
+func debugPrint(_ message: String) {
+  #if DEBUG
+    print(message)
+  #endif
+}
+
+public class CloudKitDbDocuments {
+  private static func upload(
+    containerId: String, localFilePath: String, cloudFileName: String,
+    result: @escaping FlutterResult
+  ) {
+    guard let containerURL = FileManager.default.url(forUbiquityContainerIdentifier: containerId)
+    else {
+      result(containerError)
+      return
+    }
+    debugPrint("containerURL: \(containerURL.path)")
+
+    let cloudFileURL = containerURL.appendingPathComponent(cloudFileName)
+    let localFileURL = URL(fileURLWithPath: localFilePath)
+
+    do {
+      if FileManager.default.fileExists(atPath: cloudFileURL.path) {
+        try FileManager.default.removeItem(at: cloudFileURL)
+      } else {
+        let cloudFileDirURL = cloudFileURL.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: cloudFileDirURL.path) {
+          try FileManager.default.createDirectory(
+            at: cloudFileDirURL, withIntermediateDirectories: true, attributes: nil)
+        }
+      }
+      try FileManager.default.copyItem(at: localFileURL, to: cloudFileURL)
+      result(nil)
+    } catch {
+      result(nativeCodeError(error))
     }
   }
 }
