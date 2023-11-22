@@ -1,7 +1,7 @@
-class CloudKitDocuments {
+class CloudKitDbDocuments {
   final String containerId;
 
-  CloudKitDocuments({
+  CloudKitDbDocuments({
     required this.containerId,
   });
 }

@@ -4,13 +4,13 @@ import 'kv.dart';
 
 class CloudkitDb {
   final String containerId;
-  final CloudKitDocuments documents;
-  final CloudKitKv kv;
+  final CloudKitDbDocuments documents;
+  final CloudKitDbKv kv;
 
   CloudkitDb({
     required this.containerId,
-  })  : documents = CloudKitDocuments(containerId: containerId),
-        kv = CloudKitKv(containerId: containerId);
+  })  : documents = CloudKitDbDocuments(containerId: containerId),
+        kv = CloudKitDbKv(containerId: containerId);
 
   Future<String?> getPlatformVersion() {
     return CloudkitDbPlatform.instance.getPlatformVersion();

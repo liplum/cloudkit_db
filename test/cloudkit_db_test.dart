@@ -1,3 +1,4 @@
+import 'package:cloudkit_db/file.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cloudkit_db/cloudkit_db.dart';
 import 'package:cloudkit_db/cloudkit_db_platform_interface.dart';
@@ -11,11 +12,42 @@ class MockCloudkitDbPlatform
   Future<String?> getPlatformVersion() => Future.value('42');
 
   @override
-  Future<String?> kvGetString({
+  Future<String?> getKvString({
     required String containerId,
     required String key,
   }) =>
       Future.value('[$containerId] value of "$key"');
+
+  @override
+  Future<void> deleteDocument({required String containerId, required String relativePath}) {
+    // TODO: implement deleteDocument
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> downloadDocument({required String containerId, required String relativePath, required String destinationFilePath, void Function(Stream<double> p1)? onProgress}) {
+    // TODO: implement downloadDocument
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<ICloudFile>> gatherDocument({required String containerId, void Function(Stream<List<ICloudFile>> p1)? onUpdate}) {
+    // TODO: implement gatherDocument
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> moveDocument({required String containerId, required String fromRelativePath, required String toRelativePath}) {
+    // TODO: implement moveDocument
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> uploadDocument({required String containerId, required String filePath, required String destinationRelativePath, void Function(Stream<double> p1)?
+  onProgress}) {
+    // TODO: implement uploadDocument
+    throw UnimplementedError();
+  }
 }
 
 void main() {
